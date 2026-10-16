@@ -1,0 +1,10 @@
+**/**.pdf
+**/**.Q
+**/**.bed
+**/**.fam
+**/**.bim
+**/**.csv
+**/**.tsv
+**/**.eigenvec
+**/**.eigenval
+**/.DS_Store
