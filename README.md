@@ -31,7 +31,7 @@ pip install pandas matplotlib
 ### Running the pipeline
 All steps should be run from the root of the repository:
 
-1. Place the source PLINK files (`data/genotype_samples.*` and `data/1000g.*`) in `data/`
+1. Place the source PLINK files (`data/genotype_samples_2024.*`, `data/genotype_samples_2026.*` and `data/1000g.*`) in `data/`
 2. Follow the steps in [`scripts/plink.md`](scripts/plink.md)
 3. Follow the steps in [`scripts/admixture.md`](scripts/admixture.md)
 4. Generate the figures and table:
@@ -43,7 +43,8 @@ All steps should be run from the root of the repository:
 ```
 ├── data/
 │   ├── 1000g.{bed,bim,fam}                 # BED-files for 1000 Genomes data
-│   ├── genotype_samples.{bed,bim,fam}      # BED-files for 1000 Genomes data
+│   ├── genotype_samples_2024.{bed,bim,fam} # BED-files for the cohort genotypes (2024 batch)
+│   ├── genotype_samples_2026.{ped,map}     # PED/MAP-files for the cohort genotypes (2026 batch)
 │   ├── genotype_1000g_geno_mind.fam        # Sample IDs after QC (input to ADMIXTURE)
 │   ├── igsr_samples.tsv                    # 1000 Genomes sample metadata (superpopulation labels)
 ├── admixture/

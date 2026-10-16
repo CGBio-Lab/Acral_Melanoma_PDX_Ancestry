@@ -8,3 +8,11 @@
 **/**.eigenvec
 **/**.eigenval
 **/.DS_Store
+**/**.ped
+**/**.map
+**/**.log
+**/**.nosex
+**/**.irem
+**/**.missnp
+**/**.prune.*
+data/*.txt
