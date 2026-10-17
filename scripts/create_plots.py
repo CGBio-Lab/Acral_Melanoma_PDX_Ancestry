@@ -1,70 +1,94 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
 from matplotlib.lines import Line2D
 
-# This data dictionary contains the samples from the 1000 Genomes 
+plt.rcParams.update({'pdf.fonttype': 42, 'ps.fonttype': 42})
+
+# This data dictionary contains the samples from the 1000 Genomes
 # Project with their corresponding Superpopulation
 labels_kg = (
-    pd.read_csv('data/igsr_samples.tsv',sep='\t')[['Sample name','Superpopulation code']]
-    .rename(columns={'Sample name':'ID','Superpopulation code':'superpop'})
-    .query('superpop in ["AFR","AMR","EAS","EUR","SAS"]')
+    pd.read_csv('data/1000g_panel.tsv',sep='\t')[['sample','super_pop']]
+    .rename(columns={'sample':'ID','super_pop':'superpop'})
 )
 
-admixture = (
-    pd.concat([
-        pd.read_csv('data/genotype_1000g_geno_mind.fam',sep=' ',header=None, names=['FID','ID','a','b','c','d'])[['ID']],
-        pd.read_csv('admixture/genotype_1000g_geno_mind.5.Q',sep=' ',header=None, names=['pop1','pop2','pop3','pop4','pop5'])],axis=1)
-    .merge(labels_kg, on='ID',how='left')
-    .sort_values(['superpop','pop1'])
-    .assign(superpop=lambda x: x.superpop.mask(x.ID.str[0:2] == "PD",'BRA'))
-    .dropna(subset='superpop')
-)
+# Cohort samples: sample type (blood, tumour, cell_line) and samples excluded from the analysis.
+# Samples not in the metadata (2024 batch) are blood samples. Only blood samples in the final set.
+metadata = pd.read_csv('data/genotype_samples_metadata.csv').rename(columns={'sampleID':'ID'})
+excluded = metadata.loc[metadata.notes.str.contains('exclude', na=False), 'ID'].tolist()
 
-# Create the plot use in Fig 1E
-fig, axes = plt.subplots(1,6,figsize=(17,5),sharey=True,tight_layout=True)
-cluster_names = list(admixture.columns)
-
-for i, sp in enumerate(['BRA','EUR','AFR','AMR','EAS','SAS']):
-    print(sp)
-    adm_sp = admixture.query('superpop == @sp')
-    cluster_names = list(adm_sp.columns[adm_sp.columns.str.startswith('pop')])
-    main_pop = adm_sp[cluster_names].mean().idxmax()
-    cluster_names.remove(main_pop)
-
-    (
-        adm_sp
-        .assign(sort_order=adm_sp[cluster_names].mean(axis=1))
-        .sort_values('sort_order')
-        .drop(columns=['ID','superpop','sort_order'])
-        .plot(kind='bar',stacked=True,width=1,ax=axes[i],rasterized=True,
-              sharey=True,title=sp + " - cohort" if sp == "BRA" else sp,
-              legend=False,ylim=(0,1))
+def add_labels(df):
+    """Label the samples by superpopulation (BRA for the cohort) and keep only the cohort blood samples."""
+    return (
+        df
+        .merge(labels_kg, on='ID', how='left')
+        .merge(metadata[['ID','sample_type']], on='ID', how='left')
+        .fillna({'superpop':'BRA', 'sample_type':'blood'})
+        .query('superpop != "BRA" or (sample_type == "blood" and ID not in @excluded)')
     )
-    axes[i].set_xticklabels([])
-    axes[i].tick_params(axis='both', which='both', length=0)
-    axes[i].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-## save as pdf
-plt.savefig('admixture/admixture.pdf',bbox_inches='tight')
 
-# Save the admixture table used in Supplementary Table 12
+clusters = ['K1','K2','K3','K4','K5']
+admixture = add_labels(
+    pd.concat([
+        pd.read_csv('data/genotype_1000g_nopal_prune.fam',sep=' ',header=None, names=['FID','ID','a','b','c','d'])[['ID']],
+        pd.read_csv('admixture/genotype_1000g_nopal_prune.5.Q',sep=' ',header=None, names=clusters)],axis=1)
+)
+
+# Create the plot used in Fig 1E
+cluster_colors = ['#E41A1C','#377EB8','#4DAF4A','#FF7F00','#984EA3']
+eur_cluster = admixture.query('superpop == "EUR"')[clusters].mean().idxmax()
+superpops = ['AFR','AMR','EAS','EUR','SAS','BRA']
+
+fig, axes = plt.subplots(1,6,figsize=(12,3.5),sharey=True)
+for i, sp in enumerate(superpops):
+    adm_sp = admixture.query('superpop == @sp')
+    if sp == 'BRA':
+        # Cohort samples sorted by European ancestry
+        adm_sp = adm_sp.sort_values(eur_cluster)
+    else:
+        # Reference samples sorted by their main cluster, then by ancestry proportions
+        adm_sp = (
+            adm_sp
+            .assign(main_cluster=adm_sp[clusters].idxmax(axis=1))
+            .sort_values(['main_cluster'] + clusters, ascending=[True] + [False]*len(clusters))
+        )
+    (
+        adm_sp[clusters].reset_index(drop=True)
+        .plot(kind='bar',stacked=True,width=1,linewidth=0,ax=axes[i],color=cluster_colors,
+              legend=False,ylim=(0,1),xlim=(-0.5,len(adm_sp)-0.5))
+    )
+    axes[i].set_title('Brazil' if sp == 'BRA' else sp, fontsize=10, fontweight='bold', pad=4)
+    axes[i].set_xticks([])
+    axes[i].tick_params(left=(i == 0), labelleft=(i == 0), bottom=False)
+    axes[i].spines['left'].set_visible(i == 0)
+    axes[i].spines['right'].set_visible(i == len(superpops) - 1)
+axes[0].set_ylabel('Ancestry proportion', fontsize=11)
+axes[0].legend([f'Cluster {i}' for i in range(1,6)], loc='upper center', bbox_to_anchor=(3, 1.35),
+               fontsize=7, ncol=5, framealpha=0.9)
+fig.subplots_adjust(wspace=0.05, bottom=0.18, top=0.82)
+## save as pdf
+plt.savefig('admixture/admixture.pdf',dpi=300,bbox_inches='tight')
+
+# Save the admixture tables used in Extended Data Table 12 (SNP array):
+# ancestry proportions of the cohort samples, and mean ancestry proportions of each 1000 Genomes superpopulation
 (
     admixture
-    .assign(sort_order=adm_sp[cluster_names].mean(axis=1))
-    .sort_values(['superpop','sort_order'])
-    .drop(columns=['sort_order'])
+    .query('superpop == "BRA"')
+    .rename(columns={'ID':'IID'})
+    [['IID','sample_type'] + clusters]
     .to_csv('admixture/admixture_table.csv',index=False)
 )
+(
+    admixture
+    .query('superpop != "BRA"')
+    .rename(columns={'superpop':'population'})
+    .groupby('population')[clusters].mean()
+    .to_csv('admixture/admixture_superpop_table.csv')
+)
 
-# Create the PCA plot used in Fig 1D
-pca = (
+# Create the PCA plot used in Fig S1D
+pca = add_labels(
     pd.read_csv('pca/genotype_1000g_nopal_prune.eigenvec',sep=r'\s+',header=None)
     .set_axis(['FID','ID'] + [f'PC{i}' for i in range(1,11)], axis=1)
-    .merge(labels_kg, on='ID',how='left')
-    .assign(superpop=lambda x: x.superpop.mask(x.ID.str[0:2] == "PD",'BRA'))
-    .dropna(subset='superpop')
-    # PC signs are arbitrary; flip them to match the orientation in the paper
-    .assign(PC1=lambda x: -x.PC1, PC2=lambda x: -x.PC2)
 )
 
 # Percentage of variance explained by each PC (relative to the top 10 PCs)

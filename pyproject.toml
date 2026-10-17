@@ -1,0 +1,9 @@
+[project]
+name = "acral-melanoma-pdx-ancestry"
+version = "1.0.0"
+description = "Figures and table for the genetic ancestry analysis of the acral melanoma cohort"
+requires-python = "==3.12.*"
+dependencies = [
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+]

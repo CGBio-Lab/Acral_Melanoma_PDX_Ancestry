@@ -16,3 +16,6 @@
 **/**.missnp
 **/**.prune.*
 data/*.txt
+**/**.P
+**/**.P.in
+.venv/
