@@ -2,7 +2,7 @@
 
 ## Overview
 
-This analysis pipeline estimates the genetic ancestry of the acral melanoma cohort by merging germline genotypes with the 1000 Genomes Project reference panel. The principal components and the ancestral populations are computed using only the 1000 Genomes samples, and the cohort samples are projected onto them. It produces the Principal Component Analysis (PCA) and ADMIXTURE plots, and the per-sample ancestry proportions table, using the cohort blood samples.
+This analysis pipeline estimates the genetic ancestry of the acral melanoma cohort attached to [Acral_Melanoma_PDX_models_from_Latin_America](https://github.com/team113sanger/Acral_Melanoma_PDX_models_from_Latin_America) by merging germline genotypes with the 1000 Genomes Project reference panel. The principal components and the ancestral populations are computed using only the 1000 Genomes samples, and the cohort samples are projected onto them. It produces the Principal Component Analysis (PCA) and ADMIXTURE plots, and the per-sample ancestry proportions table, using the cohort blood samples.
 
 ## Analysis Scripts
 
